@@ -1,5 +1,4 @@
 #include "opencv2/core/core.hpp"
-//#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/face.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -8,20 +7,23 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <string>
 
 using namespace cv;
 using namespace std;
 
+const char* original_window = "影像";
+const char* croppedImage = "臉部截圖";
+const char* faceLearn = "臉部學習";
+
+int learnValue = 0;
+string learnName = string("");
+
+void on_slider_faceLearn(int, void*);
+
 int main(int argc, const char* argv[]) {
 
-    if (argc != 2) {
-        cout << "usage: " << argv[0] << " </path/to/haar_cascade>" << endl;
-        cout << "\t </path/to/haar_cascade> -- Path to the Haar Cascade for face detection." << endl;
-        exit(1);
-    }
-
-    string fn_haar = string(argv[1]);
-
+    string fn_haar = string("../haarcascade_frontalface_alt.xml");
     CascadeClassifier haar_cascade;
     haar_cascade.load(fn_haar);
 
@@ -30,10 +32,19 @@ int main(int argc, const char* argv[]) {
         cerr << "Capture Device ID 0 cannot be opened." << endl;
         return -1;
     }
+    namedWindow(original_window);
+    createTrackbar(faceLearn, original_window, &learnValue, 1, on_slider_faceLearn);
 
     Mat frame;
 
+    int file = 0;
+
+    vector<int> compression_params;
+    compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    compression_params.push_back(9);
+
     for (;;) {
+
         cap >> frame;
         Mat original = frame.clone();
         Mat gray;
@@ -49,12 +60,43 @@ int main(int argc, const char* argv[]) {
             Mat face = gray(face_x);
             Mat face_resized;
             // cv::resize(face, face_resized, Size(im_width, im_height), 1.0, 1.0, INTER_CUBIC);
-        // int prediction = model->predict(face_resized);
+            // int prediction = model->predict(face_resized);
+            Mat croppedFaceImage;
+            original(face_x).copyTo(croppedFaceImage);
+            imshow(croppedImage, croppedFaceImage);
+            rectangle(original, face_x, CV_RGB(0, 255, 0), 1);
+
+            if (learnValue == 1) {
+                std::ostringstream oss;
+                oss << learnName << file << ".png";
+                file++;
+                imwrite(oss.str(), croppedFaceImage, compression_params);
+                if ( file == 10) {
+                    learnValue = 0;
+                    setTrackbarPos(faceLearn, original_window, 0);
+                }
+            } else {
+                file = 0;
+            }
+        }
+        imshow(original_window, original);
+
+        char key = (char) waitKey(20);
+        if (key == 27) {
+            break;
         }
     }
 
-
-
-
     return 0;
+}
+
+void on_slider_faceLearn(int, void*) {
+
+    if (learnValue == 1) {
+        string name;
+        cout << "enter your name:";
+        getline(cin, learnName);
+    } else {
+        learnName = string("");
+    }
 }
