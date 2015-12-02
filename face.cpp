@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <sys/stat.h>
 
 using namespace cv;
 using namespace std;
@@ -18,10 +19,17 @@ const char* faceLearn = "臉部學習";
 
 int learnValue = 0;
 string learnName = string("");
+string learnNameDir = string("");
+
+struct stat sb;
 
 void on_slider_faceLearn(int, void*);
 
 int main(int argc, const char* argv[]) {
+
+    if ( stat("data", &sb) == 0 && S_ISDIR(sb.st_mode) ) {
+        cout << "YES! you have data folder!" << endl;
+    }
 
     string fn_haar = string("../haarcascade_frontalface_alt.xml");
     CascadeClassifier haar_cascade;
@@ -68,8 +76,9 @@ int main(int argc, const char* argv[]) {
 
             if (learnValue == 1) {
                 std::ostringstream oss;
-                oss << learnName << file << ".png";
+                oss << learnNameDir << "/" << learnName << file << ".png";
                 file++;
+                //cout << oss.str() << "   HIHI" << endl;
                 imwrite(oss.str(), croppedFaceImage, compression_params);
                 if ( file == 10) {
                     learnValue = 0;
@@ -93,9 +102,23 @@ int main(int argc, const char* argv[]) {
 void on_slider_faceLearn(int, void*) {
 
     if (learnValue == 1) {
-        string name;
         cout << "enter your name:";
         getline(cin, learnName);
+
+        ostringstream oss;
+        oss << "mkdir -p data/" << learnName;
+        system(oss.str().c_str());
+
+        oss.str( string() );
+        oss.clear();
+        oss << "data/" << learnName;
+        learnNameDir = oss.str();
+/*
+        ostringstream oss;
+        oss << "data/" << learnName;
+        boost::filesystem::path dir(oss.str());
+        boost::filesystem::create_directory(dir);
+*/
     } else {
         learnName = string("");
     }
